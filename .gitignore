@@ -1,3 +1,4 @@
 geiger_backend/
-
+.vscode/
+.DS_Store
 node_modules/
