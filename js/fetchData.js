@@ -31,4 +31,4 @@ async function fetchData(apiUrl) {
 }
 
 // Gọi API với URL (thay thế bằng URL thực tế của bạn)
-fetchData('http://api.rabbitcave.com.vn/record?deviceID=**string**&day=**int**&month=**int**&year=**int**&Cps=**real**&uSv:**real**');
+fetchData('http://localhost:5000/record?deviceID=**string**&day=**int**&month=**int**&year=**int**&Cps=**real**&uSv:**real**');

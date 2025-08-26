@@ -2,232 +2,611 @@
 let xArray = [];
 let yArray = [];
 
-// Time interval for refreshing data (ms)
+// Time interval for refreshing data
 const timeIntervals = 3000;
 
-// Always hit /testconnection now
+// API endpoint
 const endpoint = 'https://api.rabbitcave.com.vn';
 
-// Track which device is selected
-let CURRENT_SELECTED_DEVICE_ID = null;
+// Variable to store interval ID for refreshing data
+let devices_intervals = undefined;
 
-// Fetch the list of devices (from the data payloads we’ve saved)
+// Function to fetch device data from the API
 async function fecthDevice(apiUrl) {
-  try {
-    const response = await fetch(apiUrl);
-    if (!response.ok) throw new Error(`Http error! Status: ${response.status}`);
-    const payload = await response.json();
+    try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            throw new Error('Http error! Status : ${response.status}$');
+        }
+        const data = await response.json();
 
-    // Normalize to an array
-    const all = Array.isArray(payload) ? payload : [payload];
+        const outputList = document.getElementById("listDevice");
+        outputList.innerHTML = "";
 
-    const outputList = document.getElementById("listDevice");
-    outputList.innerHTML = "";
+        if (data.error) {
+            console.warn("API Error:", data.error);
+            const listItem = document.createElement("li");
+            listItem.classList.add("dropdown-item");
 
-    // Extract unique IDs
-    const ids = [...new Set(all.map(r => r.data.deviceID))];
-    if (ids.length === 0) {
-      const li = document.createElement("li");
-      li.classList.add("dropdown-item");
-      li.textContent = "Không có thiết bị";
-      outputList.appendChild(li);
-      return;
+            const link = document.createElement("a");
+            link.textContent = "Không có thiết bị";
+            listItem.appendChild(link);
+            outputList.appendChild(listItem);
+            return null;
+        }
+
+        const devices = Array.isArray(data) ? data : [data];
+        devices.forEach(device => {
+            const listItem = document.createElement("li");
+            listItem.classList.add("dropdown-item"); // Assign class to each device
+
+            listItem.onclick = (event) => {
+                event.preventDefault(); // Prevent default navigation
+                getDevice(`${endpoint}/device?deviceID=`, device.deviceID);
+            };
+
+            const link = document.createElement("a");
+            link.textContent = `Device ${device.deviceID}`;
+            listItem.appendChild(link);
+            outputList.appendChild(listItem);
+        });
+
+        console.log("Fetched devices:", data);
+        return data;
+    } catch (error) {
+        console.error("Error fetching data:", error);
+        console.error(apiUrl);
     }
-
-    ids.forEach(id => {
-      const li = document.createElement("li");
-      li.classList.add("dropdown-item");
-      li.onclick = e => {
-        e.preventDefault();
-        getDevice(apiUrl, id);
-      };
-      const a = document.createElement("a");
-      a.textContent = `Device ${id}`;
-      li.appendChild(a);
-      outputList.appendChild(li);
-    });
-  }
-  catch (err) {
-    console.error("Error fetching device list:", err);
-  }
 }
 
-// Load one device’s info and first draw
+// Function to get device data by ID
 async function getDevice(apiUrl, id) {
-  CURRENT_SELECTED_DEVICE_ID = id;
-  document.getElementById("infoId").textContent = id;
-  xArray = [];
-  yArray = [];
+    CURRENT_SELECTED_DEVICE_ID = id;
+    try {
+        apiUrl += id;
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            throw new Error('Http error! Status : ${response.status}$');
+        }
+        const data = await response.json();
+        if (data.error) {
+            console.warn("API Error:", data.error);
+            return null;
+        }
 
-  try {
-    const resp = await fetch(apiUrl);
-    if (!resp.ok) throw new Error(`Status ${resp.status}`);
-    const payload = await resp.json();
-    const all = Array.isArray(payload) ? payload : [payload];
+        // Clear previous data
+        xArray = [];
+        yArray = [];
 
-    // Filter to this id
-    const recs = all.filter(r => r.data.deviceID === id.toString());
+        const devices = Array.isArray(data) ? data : [data];
+        devices.forEach(device => {
+            let num = device.deviceID;
+            document.getElementById("infoId").textContent = `${num.toString()}`;
+            document.getElementById("infoName").textContent = `${device.deviceName}`;
+            document.getElementById("infoType").textContent = `${device.deviceType}`;
+        });
 
-    // Show name/type if available
-    if (recs.length) {
-      const { deviceName, deviceType } = recs[0].data;
-      document.getElementById("infoName").textContent = deviceName;
-      document.getElementById("infoType").textContent = deviceType;
+        console.log("Fetched devices:", devices);
+        getData(`${endpoint}/record?deviceID=`, id);
+    } catch (error) {
+        console.error("Error fetching data: ", error);
+        console.error(apiUrl);
     }
-
-    // Draw time-series into #myPlot
-    plotDeviceData(recs, "myPlot", `Device ${id} Data`);
-  }
-  catch (err) {
-    console.error("Error loading device data:", err);
-  }
 }
 
-// Show all devices in grid
+// Function to fetch all devices and display charts
 async function fetchAllDevicesWithCharts(apiUrl) {
-  try {
-    const resp = await fetch(apiUrl);
-    if (!resp.ok) throw new Error(`Status ${resp.status}`);
-    const payload = await resp.json();
-    const all = Array.isArray(payload) ? payload : [payload];
+    try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json();
+        const deviceContainer = document.getElementById("deviceChartGrid"); // Change to correct container
+        deviceContainer.innerHTML = ""; // Clear previous data
 
-    // group by deviceID
-    const byId = all.reduce((acc, r) => {
-      const id = r.data.deviceID;
-      (acc[id] = acc[id] || []).push(r);
-      return acc;
-    }, {});
+        if (data.error) {
+            console.warn("API Error:", data.error);
+            deviceContainer.innerHTML = "<p class='text-white'>No devices found</p>";
+            return;
+        }
 
-    const container = document.getElementById("deviceChartGrid");
-    container.innerHTML = "";
+        const devices = Array.isArray(data) ? data : [data];
 
-    for (let id in byId) {
-      const wrapper = document.createElement("div");
-      wrapper.classList.add("device-chart");
+        // Loop through devices and create charts
+        for (let device of devices) {
+            // Create chart container
+            const chartWrapper = document.createElement("div");
+            chartWrapper.classList.add("device-chart");
 
-      const title = document.createElement("h5");
-      title.classList.add("device-title");
-      title.textContent = `Device ${id}`;
-      wrapper.appendChild(title);
+            // Device Title
+            const title = document.createElement("h5");
+            title.classList.add("device-title");
+            title.textContent = `Device ${device.deviceID} - ${device.deviceName}`;
+            chartWrapper.appendChild(title);
 
-      const chartDiv = document.createElement("div");
-      chartDiv.id = `chart-${id}`;
-      chartDiv.style.width = "100%";
-      chartDiv.style.height = "300px";
-      wrapper.appendChild(chartDiv);
+            // Chart Div
+            const chartDiv = document.createElement("div");
+            chartDiv.id = `chart-${device.deviceID}`;
+            chartDiv.style.width = "100%";
+            chartDiv.style.height = "300px";
+            chartWrapper.appendChild(chartDiv);
 
-      container.appendChild(wrapper);
-      plotDeviceData(byId[id], chartDiv.id, `Data for Device ${id}`);
+            deviceContainer.appendChild(chartWrapper); // Append to #deviceChartGrid
+
+            // Fetch and plot data for each device
+            await plotDeviceData(`${endpoint}/record?deviceID=`, device.deviceID, chartDiv.id);
+        }
+    } catch (error) {
+        console.error("Error fetching all devices with charts:", error);
     }
-  }
-  catch (err) {
-    console.error("fetchAllDevicesWithCharts:", err);
-  }
 }
 
-// Plot helper: given an array of records, a divId and title
-function plotDeviceData(records, divId, titleText) {
-  const x = [], y = [];
-  records.forEach(r => {
-    x.push(new Date(r.data.timeStamp * 1000));
-    y.push(+r.data.Cps);
-  });
-  const trace = { x, y, type: 'scatter', mode: 'lines', line: { color: 'white', width: 2 } };
-  const layout = {
-    title: { text: titleText, font: { color: 'white' } },
-    xaxis: { title: 'Time', color: 'white', gridcolor: 'rgba(255,255,255,0.2)' },
-    yaxis: { title: 'CPS', color: 'white', gridcolor: 'rgba(255,255,255,0.2)' },
-    paper_bgcolor: 'transparent', plot_bgcolor: 'transparent'
-  };
-  Plotly.newPlot(divId, [trace], layout, { scrollZoom: true });
+// Function to plot device data on a chart
+async function plotDeviceData(apiUrl, id, chartId) {
+    try {
+        apiUrl += id;
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.error) {
+            console.warn("API Error:", data.error);
+            return;
+        }
+
+        let xArray = [];
+        let yArray = [];
+
+        const devices = Array.isArray(data) ? data : [data];
+        devices.forEach(device => {
+            const myUnixTimestamp = device.timeStamp;
+            const myDate = new Date(myUnixTimestamp * 1000);
+            xArray.push(myDate);
+            yArray.push(parseInt(device.Cps));
+        });
+
+        const dataDevice = [{
+            x: xArray,
+            y: yArray,
+            type: 'scatter',
+            mode: 'lines',  // Ensures it's a line chart
+            line: { color: 'white', width: 2 } // Change line color to white
+        }];
+
+        const layout = {
+            xaxis: { title: "Time", gridcolor: 'rgb(255, 255, 255)', color: 'white' },
+            yaxis: { title: "CPS", gridcolor: 'rgb(255, 255, 255)', color: 'white' },
+            title: { text: `Data for Device ${id}`, font: { color: 'white' } },
+            paper_bgcolor: '#00000000',
+            plot_bgcolor: '#00000000',
+        };
+
+        // Display chart using Plotly
+        Plotly.newPlot(chartId, dataDevice, layout, { scrollZoom: true });
+    } catch (error) {
+        console.error(`Error fetching data for device ${id}:`, error);
+    }
 }
 
-// --- EXPORT FUNCTIONS ---
-
-// Single-device export
-async function fetchAndExportData(format) {
-  if (!CURRENT_SELECTED_DEVICE_ID) {
-    return alert("Please select a device first");
-  }
-  const resp = await fetch(endpoint + '/records');
-  if (!resp.ok) return alert(`Status ${resp.status}`);
-  const payload = await resp.json();
-  const all = Array.isArray(payload) ? payload : [payload];
-  const recs = all.filter(r => r.data.deviceID === CURRENT_SELECTED_DEVICE_ID.toString());
-  if (!recs.length) return alert("No data for that device");
-
-  if (format === 'csv') exportToCSV(recs);
-  else if (format === 'xlsx') await exportToXLSX(recs);
-  else if (format === 'tsv') exportToTSV(recs);
-}
-
-// All-devices export
-async function exportAllDevicesData(format) {
-  const resp = await fetch(endpoint + '/records');
-  if (!resp.ok) return alert(`Status ${resp.status}`);
-  const payload = await resp.json();
-  const all = Array.isArray(payload) ? payload : [payload];
-  if (!all.length) return alert("No data to export");
-
-  // flatten to simple rows
-  const flat = all.map(r => ({
-    deviceID: r.data.deviceID,
-    timeStamp: r.data.timeStamp,
-    Cps: r.data.Cps,
-    uSv: r.data.uSv
-  }));
-
-  if (format === 'csv') exportToCSV(flat);
-  else if (format === 'xlsx') await exportToXLSX(flat);
-  else if (format === 'tsv') exportToTSV(flat);
-}
-
-// CSV/XLSX/TSV helpers
-function exportToCSV(data, filename = "device_data.csv") {
-  const header = Object.keys(data[0]).join(",") + "\n";
-  const rows = data.map(r => Object.values(r).join(",")).join("\n");
-  const csv = header + rows;
-  const blob = new Blob([csv], { type: "text/csv" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  link.click();
-}
-
-async function exportToXLSX(data, filename = "device_data.xlsx") {
-  if (typeof XLSX === "undefined") {
-    await new Promise(r => {
-      const s = document.createElement("script");
-      s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-      s.onload = r;
-      document.head.appendChild(s);
+// Event listener for DOM content loaded
+document.addEventListener("DOMContentLoaded", function () {
+    document.getElementById("showAllDevicesBtn").addEventListener("click", () => {
+        fetchAllDevicesWithCharts(`${endpoint}/device`);
     });
-  }
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Data");
-  XLSX.writeFile(wb, filename);
+});
+
+// Function to fetch data and update chart
+async function getData(apiUrl, id) {
+    try {
+        apiUrl += id;
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            throw new Error('Http error! Status : ${response.status}$');
+        }
+        const data = await response.json();
+        if (data.error) {
+            console.warn("API Error:", data.error);
+            return null;
+        }
+
+        const devices = Array.isArray(data) ? data : [data];
+        devices.forEach(device => {
+            const myUnixTimestamp = device.timeStamp; // start with a Unix timestamp
+            const myDate = new Date(myUnixTimestamp * 1000); // convert timestamp to milliseconds and construct Date object
+            xArray.push(myDate);
+            yArray.push(parseInt(device.Cps).toString());
+        });
+
+        const dataDevice = [{
+            x: xArray,
+            y: yArray,
+            type: 'scatter',
+            marker: {
+                color: 'black',
+            }
+        }];
+
+        // Define Layout
+        const layout = {
+            xaxis: {
+                autorange: true,
+                title: "Time",
+                gridcolor: 'rgb(255, 255, 255)',
+            },
+            yaxis: {
+                autorange: true,
+                title: "CPS",
+                gridcolor: 'rgb(255, 255, 255)',
+            },
+            title: "Data table",
+            paper_bgcolor: '#00000000',
+            plot_bgcolor: '#00000000',
+        };
+
+        // Display using Plotly
+        Plotly.newPlot("myPlot", dataDevice, layout, { scrollZoom: true });
+        console.log("Fetched devices:", devices);
+
+        // Set interval to refresh data
+        if (devices_intervals !== undefined) {
+            clearInterval(devices_intervals);
+        }
+        devices_intervals = setInterval(() => {
+            listenForDevice(`${endpoint}/record?deviceID=`, id);
+        }, timeIntervals);
+    } catch (error) {
+        console.error("Error fetching data: ", error);
+    }
+}
+
+// Function to export data to CSV
+function exportToCSV(data, filename = "device_data.csv") {
+    const csvRows = ["Time,CPS"];
+    data.forEach(row => {
+        const date = new Date(row.timeStamp * 1000).toLocaleString();
+        csvRows.push(`${date},${row.Cps}`);
+    });
+
+    const csvString = csvRows.join("\n");
+    const blob = new Blob([csvString], { type: "text/csv" });
+    const link = document.createElement("a");
+
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Function to export data to XLSX
+async function exportToXLSX(data, filename = "device_data.xlsx") {
+    if (typeof XLSX === "undefined") {
+        const script = document.createElement("script");
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+        document.head.appendChild(script);
+        await new Promise(resolve => script.onload = resolve);
+    }
+
+    // Prepare data for Excel with separate "Time" and "CPS" columns
+    const wsData = [["Time", "CPS"]]; // Header row
+    data.forEach(row => {
+        const time = new Date(row.timeStamp * 1000).toLocaleString(); // Convert timestamp to readable date
+        wsData.push([time, row.Cps]); // Each entry as a row in the spreadsheet
+    });
+
+    // Create worksheet and workbook
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Device Data");
+
+    // Export the Excel file
+    XLSX.writeFile(wb, filename);
 }
 
 function exportToTSV(data, filename = "device_data.tsv") {
-  const header = Object.keys(data[0]).join("\t") + "\n";
-  const rows = data.map(r => Object.values(r).join("\t")).join("\n");
-  const tsv = header + rows;
-  const blob = new Blob([tsv], { type: "text/tab-separated-values" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  link.click();
+    const tsvRows = ["Time\tCPS"];
+
+    data.forEach(row => {
+        const date = new Date(row.timeStamp * 1000);
+        const time = date.toISOString().replace("T", " ").substring(0, 19); // e.g., "2025-05-24 15:20:00"
+        tsvRows.push(`${time}\t${row.Cps}`);
+    });
+
+    const tsvString = tsvRows.join("\n");
+    const blob = new Blob([tsvString], { type: "text/tab-separated-values" });
+    const link = document.createElement("a");
+
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
-// --- Wire up your buttons ---
-document.addEventListener("DOMContentLoaded", () => {
-  document
-    .getElementById("showAllDevicesBtn")
-    .addEventListener("click", () => 
-      fetchAllDevicesWithCharts(endpoint + '/records')
-    );
 
-  // initial load of dropdown
-  fecthDevice(endpoint + '/records');
+// Event listener for DOM content loaded
+document.addEventListener("DOMContentLoaded", function () {
+    const exportBtn = document.getElementById("exportBtn");
+    if (exportBtn) {
+        exportBtn.addEventListener("click", exportDeviceData);
+    } else {
+        console.error("Export button not found!");
+    }
 });
+
+async function fetchAndExportData(format) {
+    if (!CURRENT_SELECTED_DEVICE_ID) {
+        alert("Please select a device before exporting data.");
+        return;
+    }
+
+    const startTime = document.getElementById("startTime").value;
+    const endTime = document.getElementById("endTime").value;
+
+    if (!startTime || !endTime) {
+        alert("Please select a valid time range.");
+        return;
+    }
+
+    const apiUrl = `${endpoint}/record?deviceID=${CURRENT_SELECTED_DEVICE_ID}&startTime=${new Date(startTime).getTime() / 1000}&endTime=${new Date(endTime).getTime() / 1000}`;
+
+    try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error("Failed to fetch data");
+
+        const data = await response.json();
+        if (!data.length) {
+            alert("No data found for the selected period.");
+            return;
+        }
+
+        if (format === "csv") {
+            exportToCSV(data, `Device_${CURRENT_SELECTED_DEVICE_ID}_Data.csv`);
+        } else if (format === "xlsx") {
+            await exportToXLSX(data, `Device_${CURRENT_SELECTED_DEVICE_ID}_Data.xlsx`);
+        } else if (format === "tsv") {
+            await exportToTSV(data, `Device_${CURRENT_SELECTED_DEVICE_ID}_Data.tsv`);
+        }
+    } catch (error) {
+        console.error("Export Error:", error);
+        alert("An error occurred while exporting data.");
+    }
+}
+
+async function listenForDevice(apiUrl, id) {
+    try {
+        apiUrl += id;
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            throw new Error('Http error! Status : ${response.status}$');
+        }
+        const data = await response.json();
+        if (data.error) {
+            console.warn("API Error:", data.error);
+            return null;
+        }
+
+        const devices = Array.isArray(data) ? data : [data];
+        console.log(devices.length);
+        if (xArray.length > 0) {
+            let num = parseInt(devices[devices.length - 1].timeStamp);
+            const date = new Date(num * 1000);
+            if (date.getTime() === xArray[xArray.length - 1].getTime()) {
+                console.warn("data old");
+                return null;
+            } else {
+                console.warn("data new");
+                console.warn(date, xArray[xArray.length - 1]);
+            }
+        }
+        devices.forEach(device => {
+            const myUnixTimestamp = device.timeStamp; // start with a Unix timestamp
+            const myDate = new Date(myUnixTimestamp * 1000); // convert timestamp to milliseconds and construct Date object
+            if (xArray.length > 0 && xArray[xArray.length - 1] >= myDate) {
+                // Do nothing if data is old
+            } else {
+                console.log("added new data");
+                xArray.push(myDate);
+                yArray.push(parseInt(device.Cps).toString());
+            }
+        });
+
+        // Display using Plotly
+        Plotly.redraw("myPlot");
+        console.log("Fetched devices:", devices);
+    } catch (error) {
+        console.error("Error fetching data: ", error);
+    }
+}
+
+// Initial fetch of device data
+fecthDevice(`${endpoint}/device`);
+
+// Function to export all devices data in the selected format
+async function exportAllDevicesData(format) {
+    try {
+        const startTime = document.getElementById("startTime").value;
+        const endTime = document.getElementById("endTime").value;
+
+        if (!startTime || !endTime) {
+            alert("Please select a valid time range.");
+            return;
+        }
+
+        // Fetch all devices
+        const response = await fetch(`${endpoint}/device`);
+        if (!response.ok) throw new Error("Failed to fetch devices");
+
+        const devices = await response.json();
+        if (!devices.length) {
+            alert("No devices found.");
+            return;
+        }
+
+        // Fetch data for each device within the selected time range
+        const allDeviceData = {};
+        for (let device of devices) {
+            const apiUrl = `${endpoint}/record?deviceID=${device.deviceID}&startTime=${new Date(startTime).getTime() / 1000}&endTime=${new Date(endTime).getTime() / 1000}`;
+            const deviceResponse = await fetch(apiUrl);
+            if (!deviceResponse.ok) continue;
+
+            const deviceData = await deviceResponse.json();
+            allDeviceData[device.deviceID] = {
+                name: device.deviceName,
+                records: deviceData.map(row => ({
+                    time: new Date(row.timeStamp * 1000).toLocaleString(),
+                    cps: row.Cps
+                }))
+            };
+        }
+
+        if (Object.keys(allDeviceData).length === 0) {
+            alert("No data found for the selected period.");
+            return;
+        }
+
+        // Export the data in the selected format
+        if (format === "csv") {
+            exportAllDevicesToCSV(allDeviceData);
+        } else if (format === "xlsx") {
+            exportAllDevicesToXLSX(allDeviceData);
+        } else if (format === "tsv") {
+            exportAllDevicesToTSV(allDeviceData);
+        }
+    } catch (error) {
+        console.error("Export Error:", error);
+        alert("An error occurred while exporting data.");
+    }
+}
+
+// Function to export all devices data to CSV
+function exportAllDevicesToCSV(allDeviceData) {
+    let csvRows = [];
+
+    // First row: Device names (with an empty column between each)
+    let headerRow = [];
+    for (let deviceID in allDeviceData) {
+        headerRow.push(allDeviceData[deviceID].name, ""); // Empty column
+    }
+    csvRows.push(headerRow.join(","));
+
+    // Second row: Column headers (Time, CPS) for each device
+    let subHeaderRow = [];
+    for (let deviceID in allDeviceData) {
+        subHeaderRow.push("Time", "CPS", ""); // Empty column
+    }
+    csvRows.push(subHeaderRow.join(","));
+
+    // Determine the max number of records across all devices
+    let maxRecords = Math.max(...Object.values(allDeviceData).map(d => d.records.length));
+
+    // Populate the data rows
+    for (let i = 0; i < maxRecords; i++) {
+        let row = [];
+        for (let deviceID in allDeviceData) {
+            let record = allDeviceData[deviceID].records[i] || { time: "", cps: "" };
+            row.push(record.time, record.cps, ""); // Empty column
+        }
+        csvRows.push(row.join(","));
+    }
+
+    // Convert to CSV file and trigger download
+    const csvString = csvRows.join("\n");
+    const blob = new Blob([csvString], { type: "text/csv" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "All_Devices_Data.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Function to export all devices data to XLSX
+async function exportAllDevicesToXLSX(allDeviceData) {
+    if (typeof XLSX === "undefined") {
+        const script = document.createElement("script");
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+        document.head.appendChild(script);
+        await new Promise(resolve => script.onload = resolve);
+    }
+
+    let wsData = [];
+
+    // First row: Device names (with an empty column between each device)
+    let headerRow = [];
+    for (let deviceID in allDeviceData) {
+        headerRow.push(allDeviceData[deviceID].name, ""); // Empty column
+    }
+    wsData.push(headerRow);
+
+    // Second row: Column headers for each device (Time, CPS)
+    let subHeaderRow = [];
+    for (let deviceID in allDeviceData) {
+        subHeaderRow.push("Time", "CPS");
+    }
+    wsData.push(subHeaderRow);
+
+    // Determine the max number of records across all devices
+    let maxRecords = Math.max(...Object.values(allDeviceData).map(d => d.records.length));
+
+    // Populate the data rows
+    for (let i = 0; i < maxRecords; i++) {
+        let row = [];
+        for (let deviceID in allDeviceData) {
+            let record = allDeviceData[deviceID].records[i] || { time: "", cps: "" };
+            row.push(record.time, record.cps);
+        }
+        wsData.push(row);
+    }
+
+    // Create worksheet and workbook
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "All Devices Data");
+
+    // Export the Excel file
+    XLSX.writeFile(wb, "All_Devices_Data.xlsx");
+}
+
+function exportAllDevicesToTSV(allDeviceData) {
+    let tsvRows = [];
+
+    // First row: Device names (with an empty column between each)
+    let headerRow = [];
+    for (let deviceID in allDeviceData) {
+        headerRow.push(allDeviceData[deviceID].name, ""); // Empty column
+    }
+    tsvRows.push(headerRow.join("\t"));
+
+    // Second row: Column headers (Time, CPS) for each device
+    let subHeaderRow = [];
+    for (let deviceID in allDeviceData) {
+        subHeaderRow.push("Time", "CPS", ""); // Empty column
+    }
+    tsvRows.push(subHeaderRow.join("\t"));
+
+    // Determine the max number of records across all devices
+    let maxRecords = Math.max(...Object.values(allDeviceData).map(d => d.records.length));
+
+    // Populate the data rows
+    for (let i = 0; i < maxRecords; i++) {
+        let row = [];
+        for (let deviceID in allDeviceData) {
+            let record = allDeviceData[deviceID].records[i] || { time: "", cps: "" };
+            row.push(record.time, record.cps, ""); // Empty column
+        }
+        tsvRows.push(row.join("\t"));
+    }
+
+    // Convert to TSV file and trigger download
+    const tsvString = tsvRows.join("\n");
+    const blob = new Blob([tsvString], { type: "text/tab-separated-values" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "All_Devices_Data.tsv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
