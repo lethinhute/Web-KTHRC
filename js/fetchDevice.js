@@ -5,8 +5,8 @@ let yArray = [];
 // Time interval for refreshing data
 const timeIntervals = 3000;
 
-// API endpoint
-const endpoint = 'https://api.rabbitcave.com.vn';
+// API endpoint — use the local server (same origin)
+const endpoint = '';
 
 // Variable to store interval ID for refreshing data
 let devices_intervals = undefined;
