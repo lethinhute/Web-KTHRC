@@ -12,6 +12,8 @@ router.get('/recordNewest', recordController.getNewestRecord)
 
 router.get('/recordRange', recordController.getRangeRecord)
 
+router.get('/recordLatest', recordController.getLatestRecords)
+
 router.get('/record/:deviceID', recordController.getRecordsByID)
 
 router.delete('/record/:deviceID/:timeStamp', recordController.deleteRecordByIDTimeStamp)

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import './TestDataPage.css';
 
 const endpoint = 'https://api.rabbitcave.com.vn';
@@ -37,15 +37,10 @@ export default function TestDataPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
-  const devicesRef = useRef<Device[]>([]);
-  const prevLatestRef = useRef<Record<number, number>>({});
+  // Tracks all (deviceID, timeStamp) pairs already added to the live feed
+  const seenKeysRef = useRef<Set<string>>(new Set());
 
-  // Keep devicesRef in sync
-  useEffect(() => {
-    devicesRef.current = devices;
-  }, [devices]);
-
-  // Fetch device list every 10 seconds
+  // Fetch device list every 10 seconds (for type labels in the cards)
   useEffect(() => {
     const load = async () => {
       try {
@@ -64,65 +59,61 @@ export default function TestDataPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Poll latest record per device every 2 seconds
+  // Poll the 50 most recent records across ALL devices every 2 seconds.
+  // This replaces per-device polling so that:
+  //   1. Any device sending data appears immediately (not just known devices).
+  //   2. A single efficient SQL query (ORDER BY timeStamp DESC LIMIT 50) is used
+  //      instead of fetching the entire record table and filtering in memory.
   useEffect(() => {
     const poll = async () => {
-      const devs = devicesRef.current;
-      if (devs.length === 0) return;
-
-      const now = Date.now();
-
-      // Fetch all devices concurrently
-      const results = await Promise.all(
-        devs.map(async (dev) => {
-          try {
-            const res = await fetch(`${endpoint}/record?deviceID=${dev.deviceID}`);
-            if (!res.ok) return null;
-            const records = (await res.json()) as DataRecord[] | { error: string };
-            if (!Array.isArray(records) || records.length === 0) return null;
-            const latest = records.reduce((a, b) => (a.timeStamp > b.timeStamp ? a : b));
-            return { dev, latest };
-          } catch {
-            return null;
-          }
-        })
-      );
-
-      let anySuccess = false;
-      const newLatest: Record<number, DataRecord> = {};
-      const newEntries: LiveEntry[] = [];
-
-      for (const result of results) {
-        if (!result) continue;
-        const { dev, latest } = result;
-        newLatest[dev.deviceID] = latest;
-        anySuccess = true;
-
-        // If this is newer than what we tracked, add to the live feed
-        const prevTs = prevLatestRef.current[dev.deviceID] ?? -1;
-        if (latest.timeStamp > prevTs) {
-          newEntries.push({
-            id: `${dev.deviceID}-${latest.timeStamp}-${now}`,
-            deviceID: dev.deviceID,
-            timeStamp: latest.timeStamp,
-            Cps: latest.Cps,
-            uSv: latest.uSv,
-            receivedAt: now,
-          });
-          prevLatestRef.current[dev.deviceID] = latest.timeStamp;
+      try {
+        const res = await fetch(`${endpoint}/recordLatest?limit=50`);
+        if (!res.ok) {
+          setIsConnected(false);
+          return;
         }
-      }
+        const records = (await res.json()) as DataRecord[] | { error: string };
+        if (!Array.isArray(records) || records.length === 0) {
+          setIsConnected(false);
+          return;
+        }
 
-      if (anySuccess) {
-        setLatestByDevice(newLatest);
-        setLastUpdated(new Date());
         setIsConnected(true);
+        setLastUpdated(new Date());
+
+        const now = Date.now();
+        const newEntries: LiveEntry[] = [];
+
+        // Update per-device latest values and collect unseen entries for the feed
+        setLatestByDevice((prev) => {
+          const updated = { ...prev };
+          for (const rec of records) {
+            if (!updated[rec.deviceID] || rec.timeStamp > updated[rec.deviceID].timeStamp) {
+              updated[rec.deviceID] = rec;
+            }
+
+            const key = `${rec.deviceID}-${rec.timeStamp}`;
+            if (!seenKeysRef.current.has(key)) {
+              seenKeysRef.current.add(key);
+              newEntries.push({
+                id: `${rec.deviceID}-${rec.timeStamp}-${now}`,
+                deviceID: rec.deviceID,
+                timeStamp: rec.timeStamp,
+                Cps: rec.Cps,
+                uSv: rec.uSv,
+                receivedAt: now,
+              });
+            }
+          }
+          return updated;
+        });
+
         if (newEntries.length > 0) {
-          setFeed((prev) =>
-            [...newEntries, ...prev].slice(0, MAX_FEED_ENTRIES)
-          );
+          // Sort new entries newest-first before prepending to the feed
+          newEntries.sort((a, b) => b.timeStamp - a.timeStamp);
+          setFeed((prev) => [...newEntries, ...prev].slice(0, MAX_FEED_ENTRIES));
         }
-      } else {
+      } catch {
         setIsConnected(false);
       }
     };
@@ -131,6 +122,18 @@ export default function TestDataPage() {
     const interval = setInterval(poll, 2000);
     return () => clearInterval(interval);
   }, []);
+
+  // Build a lookup map for device types
+  const deviceTypeMap = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (const d of devices) {
+      map[d.deviceID] = d.deviceType;
+    }
+    return map;
+  }, [devices]);
+
+  // All device IDs that have sent data (from the global latest poll)
+  const activeDeviceIDs = Object.keys(latestByDevice).map(Number);
 
   return (
     <div className="testdata-page">
@@ -150,17 +153,17 @@ export default function TestDataPage() {
       {/* Latest values per device */}
       <section className="testdata-section">
         <h2 className="section-title">Latest Values per Device</h2>
-        {devices.length === 0 ? (
+        {activeDeviceIDs.length === 0 ? (
           <p className="empty-msg">No devices found.</p>
         ) : (
           <div className="device-cards-grid">
-            {devices.map((dev) => {
-              const rec = latestByDevice[dev.deviceID];
+            {activeDeviceIDs.map((id) => {
+              const rec = latestByDevice[id];
               return (
-                <div key={dev.deviceID} className={`device-live-card ${rec ? 'has-data' : ''}`}>
+                <div key={id} className={`device-live-card ${rec ? 'has-data' : ''}`}>
                   <div className="dlc-header">
-                    <span className="dlc-name">Device {dev.deviceID}</span>
-                    <span className="dlc-type">{dev.deviceType}</span>
+                    <span className="dlc-name">Device {id}</span>
+                    <span className="dlc-type">{deviceTypeMap[id] ?? '—'}</span>
                   </div>
                   {rec ? (
                     <>

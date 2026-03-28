@@ -155,3 +155,20 @@ module.exports.getRangeRecord = (req, res) => {
         return res.status(200).json(rows);
     });
 }
+
+// get -> /recordLatest?limit=N
+// Returns the N most recently submitted records across ALL devices (default 50, max 200).
+// Used by the real-time monitor to detect any incoming data without pre-filtering by device.
+module.exports.getLatestRecords = (req, res) => {
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const queryStr =
+        'SELECT r.deviceID, r.timeStamp, r.Cps, r.uSv ' +
+        'FROM record r ' +
+        'ORDER BY r.timeStamp DESC LIMIT ?';
+    db.all(queryStr, [limit], function(err, rows) {
+        if (err) {
+            return res.status(500).json({ error: 'Failed to fetch records' });
+        }
+        return res.status(200).json(rows);
+    });
+};
