@@ -1,5 +1,5 @@
-// API endpoint
-const SC_ENDPOINT = 'https://api.rabbitcave.com.vn';
+// API endpoint — use the local server (same origin)
+const SC_ENDPOINT = '';
 
 // Refresh interval in milliseconds
 const SC_REFRESH_INTERVAL = 5000;
