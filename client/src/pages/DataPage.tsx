@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import './DataPage.css';
 
 // Extend window for Plotly
@@ -63,6 +63,8 @@ export default function DataPage() {
       }
     };
     load();
+    const deviceInterval = setInterval(load, 10000);
+    return () => clearInterval(deviceInterval);
   }, []);
 
   // Fetch & plot records for selected device
@@ -164,54 +166,65 @@ export default function DataPage() {
     URL.revokeObjectURL(url);
   };
 
-  // Show all devices charts
-  const handleShowAllDevices = async () => {
-    setAllDevicesVisible((v) => !v);
-    if (!allDevicesVisible) {
+  // Render all device charts using the current device list
+  const renderAllDeviceCharts = useCallback(async (devs: Device[]) => {
+    if (!allChartsRef.current) return;
+    allChartsRef.current.innerHTML = '';
+    for (const d of devs) {
       try {
-        const res = await fetch(`${endpoint}/device`);
-        const devs = (await res.json()) as Device[] | { error: string };
-        if (!Array.isArray(devs) || !allChartsRef.current) return;
-        allChartsRef.current.innerHTML = '';
-        for (const d of devs) {
-          const r = await fetch(`${endpoint}/record?deviceID=${d.deviceID}`);
-          const records = (await r.json()) as DataRecord[] | { error: string };
-          const container = document.createElement('div');
-          container.className = 'device-chart-item';
-          const title = document.createElement('p');
-          title.className = 'device-chart-title';
-          title.textContent = `Device ${d.deviceID} — ${d.deviceName}`;
-          container.appendChild(title);
-          const plotDiv = document.createElement('div');
-          plotDiv.style.width = '100%';
-          plotDiv.style.height = '260px';
-          container.appendChild(plotDiv);
-          allChartsRef.current.appendChild(container);
-          if (window.Plotly && Array.isArray(records)) {
-            const trace = {
-              x: records.map((rec) => rec.timestamp),
-              y: records.map((rec) => rec.value),
-              type: 'scatter',
-              mode: 'lines+markers',
-              marker: { color: '#5b65b5', size: 4 },
-              line: { color: '#5b65b5', width: 2 },
-            };
-            const layout = {
-              paper_bgcolor: 'rgba(0,0,0,0)',
-              plot_bgcolor: 'rgba(0,0,0,0)',
-              font: { color: '#fff' },
-              xaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa' },
-              yaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa' },
-              margin: { t: 10, b: 50, l: 50, r: 10 },
-            };
-            window.Plotly.newPlot(plotDiv, [trace], layout);
-          }
+        const r = await fetch(`${endpoint}/record?deviceID=${d.deviceID}`);
+        const records = (await r.json()) as DataRecord[] | { error: string };
+        const container = document.createElement('div');
+        container.className = 'device-chart-item';
+        const title = document.createElement('p');
+        title.className = 'device-chart-title';
+        title.textContent = `Device ${d.deviceID} — ${d.deviceName}`;
+        container.appendChild(title);
+        const plotDiv = document.createElement('div');
+        plotDiv.style.width = '100%';
+        plotDiv.style.height = '260px';
+        container.appendChild(plotDiv);
+        allChartsRef.current.appendChild(container);
+        if (window.Plotly && Array.isArray(records)) {
+          const trace = {
+            x: records.map((rec) => rec.timestamp),
+            y: records.map((rec) => rec.value),
+            type: 'scatter',
+            mode: 'lines+markers',
+            marker: { color: '#5b65b5', size: 4 },
+            line: { color: '#5b65b5', width: 2 },
+          };
+          const layout = {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#fff' },
+            xaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa' },
+            yaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa' },
+            margin: { t: 10, b: 50, l: 50, r: 10 },
+          };
+          window.Plotly.newPlot(plotDiv, [trace], layout);
         }
       } catch {
         // ignore
       }
     }
+  }, []);
+
+  // Show all devices charts
+  const handleShowAllDevices = async () => {
+    const nowVisible = !allDevicesVisible;
+    setAllDevicesVisible(nowVisible);
+    if (nowVisible) {
+      await renderAllDeviceCharts(devices);
+    }
   };
+
+  // Re-render all device charts when the device list updates and the panel is open
+  useEffect(() => {
+    if (allDevicesVisible && devices.length > 0) {
+      void renderAllDeviceCharts(devices);
+    }
+  }, [devices, allDevicesVisible, renderAllDeviceCharts]);
 
   useEffect(() => {
     return () => {
