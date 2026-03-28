@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('../../../app');  // Import the app
+const app = require('../../../server');  // Import the Express app
 const db = require('../databaseInit')
 
 // jest.mock('../databaseInit', () => ({
