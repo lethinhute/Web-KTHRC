@@ -1,5 +1,6 @@
 const express = require('express');
 const session = require('express-session');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const app = express();
 
@@ -17,9 +18,29 @@ const mainRoute = require("./src/router/indexRouter");
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+// Serve React app build output
 app.use(express.static(path.join(__dirname, 'src', 'public')));
 
+// Serve static assets (images, fonts, videos) from the project root
+app.use('/img', express.static(path.join(__dirname, 'img')));
+app.use('/font', express.static(path.join(__dirname, 'font')));
+app.use('/videos', express.static(path.join(__dirname, 'videos')));
+
 mainRoute(app);
+
+// Rate limiter for the SPA fallback
+const spaLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+// Fallback to index.html for client-side routing (SPA)
+app.use(spaLimiter, (_req, res) => {
+    res.sendFile(path.join(__dirname, 'src', 'public', 'index.html'));
+});
 
 module.exports = app;
 

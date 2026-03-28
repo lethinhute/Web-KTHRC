@@ -1,0 +1,259 @@
+.product-detail-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+/* Hero row */
+.pd-hero {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+  margin-bottom: 40px;
+  animation: fadeInUp 0.5s ease both;
+}
+
+.pd-media {
+  flex: 0 0 42%;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.pd-media img,
+.pd-media video {
+  width: 100%;
+  border-radius: 16px;
+  display: block;
+}
+
+/* Carousel wrapper */
+.pd-carousel {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.pd-carousel-track {
+  display: flex;
+  transition: transform 0.4s ease;
+}
+
+.pd-carousel-item {
+  min-width: 100%;
+}
+
+.pd-carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  z-index: 5;
+}
+
+.pd-carousel-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.pd-carousel-prev {
+  left: 8px;
+}
+
+.pd-carousel-next {
+  right: 8px;
+}
+
+.pd-video-wrap {
+  position: relative;
+}
+
+.pd-download-btn {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  text-decoration: none;
+  transition: background 0.3s;
+  z-index: 5;
+}
+
+.pd-download-btn:hover {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.pd-summary {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pd-title {
+  font-size: clamp(1.5rem, 3.5vw, 2.4rem);
+  font-weight: 700;
+  color: #fff;
+}
+
+.pd-desc {
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--text-secondary);
+}
+
+.pd-pricing {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pd-price-usd {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #80d8ff;
+}
+
+.pd-price-vnd {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.pd-buy-btn {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 12px 28px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 1rem;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(135deg, #00bcd4, #2196f3);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 188, 212, 0.3);
+}
+
+.pd-buy-btn:hover {
+  background: linear-gradient(135deg, #2196f3, #00bcd4);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 150, 136, 0.4);
+}
+
+.pd-divider {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin-bottom: 40px;
+}
+
+/* Technical content */
+.pd-content {
+  animation: fadeInUp 0.5s 0.2s ease both;
+}
+
+.pd-section-head {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #5b9bd5;
+  margin-bottom: 12px;
+}
+
+.pd-sub-head {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #87ceeb;
+  margin-top: 28px;
+  margin-bottom: 12px;
+}
+
+.pd-paragraph {
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.pd-list {
+  list-style: disc;
+  padding-left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pd-list li {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.pd-list li strong {
+  color: #fff;
+}
+
+/* Table */
+.pd-table-wrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 8px;
+}
+
+.pd-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.pd-table thead tr {
+  background: rgba(91, 101, 181, 0.25);
+}
+
+.pd-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 700;
+  color: #fff;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.pd-table td {
+  padding: 10px 16px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pd-table tr:last-child td {
+  border-bottom: none;
+}
+
+.pd-table tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+  .pd-hero {
+    flex-direction: column;
+  }
+
+  .pd-media {
+    flex: none;
+    width: 100%;
+  }
+}
