@@ -27,7 +27,6 @@ const endpoint = 'https://api.rabbitcave.com.vn';
 
 interface Device {
   deviceID: number;
-  deviceType: string;
 }
 
 interface DataRecord {
@@ -307,10 +306,6 @@ export default function DataPage() {
               <p>
                 <span className="info-label">Id device: </span>
                 {selectedDevice.deviceID}
-              </p>
-              <p>
-                <span className="info-label">Device type: </span>
-                {selectedDevice.deviceType}
               </p>
             </div>
           ) : (

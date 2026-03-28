@@ -1,13 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './TestDataPage.css';
 
 const endpoint = 'https://api.rabbitcave.com.vn';
-
-interface Device {
-  deviceID: number;
-  deviceType: string;
-}
-
 interface DataRecord {
   deviceID: number;
   timeStamp: number;
@@ -31,33 +25,12 @@ function formatTimestamp(ts: number): string {
 }
 
 export default function TestDataPage() {
-  const [devices, setDevices] = useState<Device[]>([]);
+  const seenKeysRef = useRef<Set<string>>(new Set());
   const [latestByDevice, setLatestByDevice] = useState<Record<number, DataRecord>>({});
   const [feed, setFeed] = useState<LiveEntry[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
-  // Tracks all (deviceID, timeStamp) pairs already added to the live feed
-  const seenKeysRef = useRef<Set<string>>(new Set());
-
-  // Fetch device list every 10 seconds (for type labels in the cards)
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch(`${endpoint}/device`);
-        if (!res.ok) return;
-        const data = (await res.json()) as Device[] | { error: string };
-        if (Array.isArray(data)) {
-          setDevices(data);
-        }
-      } catch {
-        // ignore
-      }
-    };
-    load();
-    const interval = setInterval(load, 10000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Poll the 50 most recent records across ALL devices every 2 seconds.
   // This replaces per-device polling so that:
@@ -123,15 +96,6 @@ export default function TestDataPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Build a lookup map for device types
-  const deviceTypeMap = useMemo(() => {
-    const map: Record<number, string> = {};
-    for (const d of devices) {
-      map[d.deviceID] = d.deviceType;
-    }
-    return map;
-  }, [devices]);
-
   // All device IDs that have sent data (from the global latest poll)
   const activeDeviceIDs = Object.keys(latestByDevice).map(Number);
 
@@ -163,7 +127,6 @@ export default function TestDataPage() {
                 <div key={id} className={`device-live-card ${rec ? 'has-data' : ''}`}>
                   <div className="dlc-header">
                     <span className="dlc-name">Device {id}</span>
-                    <span className="dlc-type">{deviceTypeMap[id] ?? '—'}</span>
                   </div>
                   {rec ? (
                     <>

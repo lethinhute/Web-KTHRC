@@ -82,7 +82,7 @@ async function getDevice(apiUrl, id) {
         devices.forEach(device => {
             let num = device.deviceID;
             document.getElementById("infoId").textContent = `${num.toString()}`;
-            document.getElementById("infoType").textContent = `${device.deviceType}`;
+            document.getElementById("infoType").textContent = `${device.deviceID}`;
         });
 
         console.log("Fetched devices:", devices);
