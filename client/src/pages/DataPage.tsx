@@ -27,7 +27,6 @@ const endpoint = 'https://api.rabbitcave.com.vn';
 
 interface Device {
   deviceID: number;
-  deviceName: string;
   deviceType: string;
 }
 
@@ -178,7 +177,7 @@ export default function DataPage() {
         container.className = 'device-chart-item';
         const title = document.createElement('p');
         title.className = 'device-chart-title';
-        title.textContent = `Device ${d.deviceID} — ${d.deviceName}`;
+        title.textContent = `Device ${d.deviceID}`;
         container.appendChild(title);
         const plotDiv = document.createElement('div');
         plotDiv.style.width = '100%';
@@ -274,10 +273,6 @@ export default function DataPage() {
           <p className="data-card-title">Device information</p>
           {selectedDevice ? (
             <div className="device-info">
-              <p>
-                <span className="info-label">Name device: </span>
-                {selectedDevice.deviceName}
-              </p>
               <p>
                 <span className="info-label">Id device: </span>
                 {selectedDevice.deviceID}

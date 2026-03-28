@@ -9,10 +9,12 @@ module.exports.createRecord = async (req, res) => {
     if (!deviceID || !timeStamp || !Cps || !uSv) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
-    // Check if the device exists
-    db.get("SELECT * FROM device WHERE deviceID = ?", [deviceID], (err, row) => {
-        if (err || !row) {
-            return res.status(404).json({ error: 'Device not found' });
+    // Auto-register the device using its client-provided ID if it doesn't exist yet.
+    // Physical devices have fixed hardware IDs, so INSERT OR IGNORE correctly skips
+    // already-registered devices without creating a duplicate entry.
+    db.run("INSERT OR IGNORE INTO device (deviceID) VALUES (?)", [deviceID], (err) => {
+        if (err) {
+            return res.status(500).json({ error: 'Failed to register device' });
         }
         const stmt = db.prepare("INSERT INTO record (deviceID, timeStamp, Cps, uSv) VALUES (?, ?, ?, ?)");
         stmt.run(deviceID, timeStamp, Cps, uSv, function(err) {

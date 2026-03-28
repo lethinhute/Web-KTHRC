@@ -3,18 +3,14 @@ const db = require('./databaseInit')
 
 // post-> /device
 module.exports.createDevice = async (req, res) => {
-    const { deviceName, deviceType } = req.body;
+    const { deviceType } = req.body;
 
-    if (!deviceName || !deviceType) {
-        return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    const stmt = db.prepare('INSERT INTO device (deviceName, deviceType) VALUES (?, ?)');
-    stmt.run(deviceName, deviceType, function(err) {
+    const stmt = db.prepare('INSERT INTO device (deviceType) VALUES (?)');
+    stmt.run(deviceType, function(err) {
         if (err) {
             return res.status(500).json({ error: 'Failed to add device' });
         }
-        res.status(201).json({ deviceID: this.lastID ,deviceName, deviceType });
+        res.status(201).json({ deviceID: this.lastID, deviceType: deviceType });
     });
     stmt.finalize();
 }
@@ -22,12 +18,9 @@ module.exports.createDevice = async (req, res) => {
 // get -> /device
 // used to get all device available
 module.exports.getDevices = async (req, res) => {
-    // TODO: proof of concept, refactor this to use proper SQL query with 
-    // parameter rather than using filter function.
+    const { deviceID, deviceType } = req.query;
 
-    const { deviceID, deviceName, deviceType } = req.query;
-
-    db.all("SELECT d.deviceID, d.deviceName, d.deviceType FROM device d", (err, rows) => {
+    db.all("SELECT d.deviceID, d.deviceType FROM device d", (err, rows) => {
         if (err) {
             return res.status(500).json({ error: 'Failed to fetch device' });
         }
@@ -36,12 +29,8 @@ module.exports.getDevices = async (req, res) => {
             rows = rows.filter(row => row.deviceID == deviceID);
         }
 
-        if (deviceName) {
-            rows = rows.filter(row => row.deviceName.toLowerCase() === deviceName.toLowerCase());
-        }
-
         if (deviceType) {
-            rows = rows.filter(row => row.deviceType.toLowerCase() === deviceType.toLowerCase());
+            rows = rows.filter(row => row.deviceType && row.deviceType.toLowerCase() === deviceType.toLowerCase());
         }
 
         if (rows.length == 0) {

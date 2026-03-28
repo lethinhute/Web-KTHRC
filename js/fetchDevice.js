@@ -82,7 +82,6 @@ async function getDevice(apiUrl, id) {
         devices.forEach(device => {
             let num = device.deviceID;
             document.getElementById("infoId").textContent = `${num.toString()}`;
-            document.getElementById("infoName").textContent = `${device.deviceName}`;
             document.getElementById("infoType").textContent = `${device.deviceType}`;
         });
 
@@ -122,7 +121,7 @@ async function fetchAllDevicesWithCharts(apiUrl) {
             // Device Title
             const title = document.createElement("h5");
             title.classList.add("device-title");
-            title.textContent = `Device ${device.deviceID} - ${device.deviceName}`;
+            title.textContent = `Device ${device.deviceID}`;
             chartWrapper.appendChild(title);
 
             // Chart Div
