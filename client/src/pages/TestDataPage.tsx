@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './TestDataPage.css';
 
 const endpoint = 'https://api.rabbitcave.com.vn';
 
 interface Device {
   deviceID: number;
-  deviceName: string;
   deviceType: string;
 }
 
@@ -19,7 +18,6 @@ interface DataRecord {
 interface LiveEntry {
   id: string;
   deviceID: number;
-  deviceName: string;
   timeStamp: number;
   Cps: number;
   uSv: number;
@@ -106,7 +104,6 @@ export default function TestDataPage() {
           newEntries.push({
             id: `${dev.deviceID}-${latest.timeStamp}-${now}`,
             deviceID: dev.deviceID,
-            deviceName: dev.deviceName,
             timeStamp: latest.timeStamp,
             Cps: latest.Cps,
             uSv: latest.uSv,
@@ -135,13 +132,6 @@ export default function TestDataPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const deviceNameMap = useMemo(
-    () => new Map(devices.map((d) => [d.deviceID, d.deviceName])),
-    [devices]
-  );
-
-  const deviceName = (id: number) => deviceNameMap.get(id) ?? `Device ${id}`;
-
   return (
     <div className="testdata-page">
       <div className="testdata-header">
@@ -169,7 +159,7 @@ export default function TestDataPage() {
               return (
                 <div key={dev.deviceID} className={`device-live-card ${rec ? 'has-data' : ''}`}>
                   <div className="dlc-header">
-                    <span className="dlc-name">{dev.deviceName}</span>
+                    <span className="dlc-name">Device {dev.deviceID}</span>
                     <span className="dlc-type">{dev.deviceType}</span>
                   </div>
                   {rec ? (
@@ -208,7 +198,6 @@ export default function TestDataPage() {
                 <tr>
                   <th>Received At</th>
                   <th>Device ID</th>
-                  <th>Device Name</th>
                   <th>Timestamp</th>
                   <th>CPS</th>
                   <th>μSv/h</th>
@@ -219,7 +208,6 @@ export default function TestDataPage() {
                   <tr key={entry.id} className={idx === 0 ? 'feed-row-new' : ''}>
                     <td>{new Date(entry.receivedAt).toLocaleTimeString()}</td>
                     <td>{entry.deviceID}</td>
-                    <td>{deviceName(entry.deviceID)}</td>
                     <td>{formatTimestamp(entry.timeStamp)}</td>
                     <td>{entry.Cps}</td>
                     <td>{entry.uSv}</td>

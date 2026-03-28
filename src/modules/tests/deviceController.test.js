@@ -18,7 +18,6 @@ beforeAll(() => {
         db.run(`
         CREATE TABLE IF NOT EXISTS device (
           deviceID INTEGER PRIMARY KEY AUTOINCREMENT,
-          deviceName TEXT UNIQUE,
           deviceType TEXT
         )
       `);
@@ -48,35 +47,34 @@ afterAll(() => {
 
 describe('Device API', () => {
     it('should create a new device via POST /device', async () => {
-        const newDevice = { deviceName: 'Device A', deviceType: 'Type test' };
+        const newDevice = { deviceType: 'Type test' };
 
         const response = await request(app)
             .post('/device')
             .send(newDevice);
 
         expect(response.status).toBe(201);
-        expect(response.body.deviceName).toBe(newDevice.deviceName);
         expect(response.body.deviceType).toBe(newDevice.deviceType);
         expect(response.body.deviceID).toBeDefined();
     });
 
     it('should fetch all devices via GET /device', async () => {
-        // Insert a device into the database first
-        await request(app).post('/device').send({ deviceName: 'Device A', deviceType: 'Type test' });
-        await request(app).post('/device').send({ deviceName: 'Device B', deviceType: 'Type test' });
+        // Insert two devices into the database first
+        await request(app).post('/device').send({ deviceType: 'Type test' });
+        await request(app).post('/device').send({ deviceType: 'Type test' });
 
         const response = await request(app).get('/device');
         expect(response.status).toBe(200);
         expect(response.body.length).toBe(2);
-        expect(response.body[0].deviceName).toBe('Device A');
-        expect(response.body[1].deviceName).toBe('Device B');
+        expect(response.body[0].deviceID).toBeDefined();
+        expect(response.body[1].deviceID).toBeDefined();
     });
 
     it('should delete a device by ID via DELETE /device/:deviceID', async () => {
         // Insert a device into the database first
         const newDevice = await request(app)
             .post('/device')
-            .send({ deviceName: 'Device A', deviceType: 'Type test' });
+            .send({ deviceType: 'Type test' });
 
         const deviceID = newDevice.body.deviceID;
 

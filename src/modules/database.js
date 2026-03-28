@@ -16,7 +16,6 @@ module.exports.createDBconnection = (filePath) => {
         db.run(`
         CREATE TABLE IF NOT EXISTS device (
           deviceID INTEGER PRIMARY KEY AUTOINCREMENT,
-          deviceName TEXT UNIQUE,
           deviceType TEXT
         )
       `);
