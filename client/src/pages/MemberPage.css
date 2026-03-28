@@ -1,0 +1,159 @@
+.member-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+.member-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.member-page-title {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: 1px;
+  position: relative;
+  display: inline-block;
+}
+
+.member-page-title::after {
+  content: '';
+  display: block;
+  width: 64px;
+  height: 3px;
+  background: var(--primary);
+  border-radius: 2px;
+  margin: 12px auto 0;
+}
+
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.member-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  animation: slideIn 0.4s ease both;
+}
+
+.member-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 16px 40px rgba(91, 101, 181, 0.25);
+  border-color: var(--primary);
+}
+
+.member-card-accent {
+  height: 3px;
+  background: linear-gradient(to right, var(--primary-dark), var(--primary));
+  width: 45%;
+  transition: width 0.5s ease;
+}
+
+.member-card:hover .member-card-accent {
+  width: 80%;
+}
+
+.member-card-body {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 24px;
+}
+
+.member-avatar-wrap {
+  flex: 0 0 100px;
+}
+
+.member-avatar {
+  width: 100px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 2px solid var(--border-color);
+  transition: border-color 0.3s;
+}
+
+.member-card:hover .member-avatar {
+  border-color: var(--primary);
+}
+
+.member-avatar-placeholder {
+  width: 100px;
+  height: 120px;
+  border-radius: 12px;
+  background: var(--primary-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.member-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.member-name {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.member-role {
+  display: inline-block;
+  padding: 4px 12px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  align-self: flex-start;
+}
+
+.member-year,
+.member-quote {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.meta-label {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  margin-right: 4px;
+}
+
+.member-quote em {
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 480px) {
+  .member-card-body {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
