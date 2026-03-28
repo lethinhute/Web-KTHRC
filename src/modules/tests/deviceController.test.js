@@ -81,3 +81,63 @@ describe('Device API', () => {
     });
 });
 
+describe('Record API - GET /recordLatest', () => {
+    it('should return 200 with an array via GET /recordLatest', async () => {
+        // The endpoint always returns 200 with an array (empty when no records exist)
+        const response = await request(app).get('/recordLatest?limit=10');
+        expect(response.status).toBe(200);
+        expect(Array.isArray(response.body)).toBe(true);
+    });
+
+    it('should return latest records after inserting via POST /record', async () => {
+        const ts1 = 1700000001;
+        const ts2 = 1700000002;
+
+        // Insert two records for a test device (auto-registers device)
+        await request(app).post('/record').send({ deviceID: 9001, timeStamp: ts1, Cps: 10, uSv: 0.1, deviceType: 'Type test' });
+        await request(app).post('/record').send({ deviceID: 9001, timeStamp: ts2, Cps: 20, uSv: 0.2, deviceType: 'Type test' });
+
+        const response = await request(app).get('/recordLatest?limit=10');
+        expect(response.status).toBe(200);
+        expect(Array.isArray(response.body)).toBe(true);
+
+        const timestamps = response.body.map((r) => r.timeStamp);
+        expect(timestamps).toContain(ts1);
+        expect(timestamps).toContain(ts2);
+
+        // Records must be ordered newest-first
+        for (let i = 0; i < response.body.length - 1; i++) {
+            expect(response.body[i].timeStamp).toBeGreaterThanOrEqual(response.body[i + 1].timeStamp);
+        }
+    });
+
+    it('should respect the limit parameter', async () => {
+        // Insert 5 records for two test devices
+        for (let i = 1; i <= 3; i++) {
+            await request(app).post('/record').send({ deviceID: 9001, timeStamp: 1700000010 + i, Cps: i, uSv: i * 0.1, deviceType: 'Type test' });
+        }
+        for (let i = 1; i <= 3; i++) {
+            await request(app).post('/record').send({ deviceID: 9002, timeStamp: 1700000020 + i, Cps: i, uSv: i * 0.1, deviceType: 'Type test' });
+        }
+
+        const response = await request(app).get('/recordLatest?limit=3');
+        expect(response.status).toBe(200);
+        expect(response.body.length).toBeLessThanOrEqual(3);
+    });
+
+    it('should return records from any device (not filtered by deviceID)', async () => {
+        const ts1 = 1700001001;
+        const ts2 = 1700001002;
+
+        await request(app).post('/record').send({ deviceID: 9001, timeStamp: ts1, Cps: 5, uSv: 0.05, deviceType: 'Type test' });
+        await request(app).post('/record').send({ deviceID: 9002, timeStamp: ts2, Cps: 7, uSv: 0.07, deviceType: 'Type test' });
+
+        const response = await request(app).get('/recordLatest?limit=50');
+        expect(response.status).toBe(200);
+
+        const deviceIDs = response.body.map((r) => r.deviceID);
+        expect(deviceIDs).toContain(9001);
+        expect(deviceIDs).toContain(9002);
+    });
+});
+
