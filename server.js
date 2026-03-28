@@ -19,8 +19,8 @@ const mainRoute = require("./src/router/indexRouter");
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Serve React app build output
-app.use(express.static(path.join(__dirname, 'src', 'public')));
+// Serve static site files from the project root
+app.use(express.static(__dirname));
 
 // Serve static assets (images, fonts, videos) from the project root
 app.use('/img', express.static(path.join(__dirname, 'img')));
@@ -39,7 +39,7 @@ const spaLimiter = rateLimit({
 
 // Fallback to index.html for client-side routing (SPA)
 app.use(spaLimiter, (_req, res) => {
-    res.sendFile(path.join(__dirname, 'src', 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 module.exports = app;
