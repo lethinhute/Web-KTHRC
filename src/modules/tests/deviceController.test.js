@@ -13,11 +13,10 @@ const db = require('../databaseInit')
 
 
 beforeAll(() => {
-    // Set up the database before tests (create device table)
     db.serialize(() => {
         db.run(`
         CREATE TABLE IF NOT EXISTS device (
-          deviceID INTEGER PRIMARY KEY AUTOINCREMENT,
+          deviceID INTEGER PRIMARY KEY,
           deviceType TEXT
         )
       `);
@@ -47,43 +46,36 @@ afterAll(() => {
 
 describe('Device API', () => {
     it('should create a new device via POST /device', async () => {
-        const newDevice = { deviceType: 'Type test' };
+        const newDevice = { deviceID: 9001, deviceType: 'Type test' };
 
         const response = await request(app)
             .post('/device')
             .send(newDevice);
 
         expect(response.status).toBe(201);
+        expect(response.body.deviceID).toBe(9001);
         expect(response.body.deviceType).toBe(newDevice.deviceType);
-        expect(response.body.deviceID).toBeDefined();
     });
 
     it('should fetch all devices via GET /device', async () => {
-        // Insert two devices into the database first
-        await request(app).post('/device').send({ deviceType: 'Type test' });
-        await request(app).post('/device').send({ deviceType: 'Type test' });
+        await request(app).post('/device').send({ deviceID: 9001, deviceType: 'Type test' });
+        await request(app).post('/device').send({ deviceID: 9002, deviceType: 'Type test' });
 
-        const response = await request(app).get('/device');
+        const response = await request(app).get('/device?deviceType=Type%20test');
         expect(response.status).toBe(200);
-        expect(response.body.length).toBe(2);
-        expect(response.body[0].deviceID).toBeDefined();
-        expect(response.body[1].deviceID).toBeDefined();
+        const ids = response.body.map((d) => d.deviceID);
+        expect(ids).toContain(9001);
+        expect(ids).toContain(9002);
     });
 
     it('should delete a device by ID via DELETE /device/:deviceID', async () => {
-        // Insert a device into the database first
-        const newDevice = await request(app)
-            .post('/device')
-            .send({ deviceType: 'Type test' });
+        await request(app).post('/device').send({ deviceID: 9003, deviceType: 'Type test' });
 
-        const deviceID = newDevice.body.deviceID;
-
-        const deleteResponse = await request(app).delete(`/device/${deviceID}`);
+        const deleteResponse = await request(app).delete('/device/9003');
         expect(deleteResponse.status).toBe(200);
         expect(deleteResponse.body.message).toBe('Device deleted successfully');
 
-        // Try to fetch the deleted device
-        const fetchResponse = await request(app).get(`/device?deviceID=${deviceID}`);
+        const fetchResponse = await request(app).get('/device?deviceID=9003');
         expect(fetchResponse.status).toBe(404);
         expect(fetchResponse.body.error).toBe('Device not found');
     });

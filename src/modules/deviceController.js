@@ -2,15 +2,18 @@ const db = require('./databaseInit')
 
 
 // post-> /device
+// Manually register a device that has not yet sent its first record.
 module.exports.createDevice = async (req, res) => {
-    const { deviceType } = req.body;
-
-    const stmt = db.prepare('INSERT INTO device (deviceType) VALUES (?)');
-    stmt.run(deviceType, function(err) {
+    const { deviceID, deviceType } = req.body;
+    if (!deviceID || !deviceType) {
+        return res.status(400).json({ error: 'deviceID and deviceType are required' });
+    }
+    const stmt = db.prepare('INSERT OR IGNORE INTO device (deviceID, deviceType) VALUES (?, ?)');
+    stmt.run(Number(deviceID), deviceType, function(err) {
         if (err) {
             return res.status(500).json({ error: 'Failed to add device' });
         }
-        res.status(201).json({ deviceID: this.lastID, deviceType: deviceType });
+        res.status(201).json({ deviceID: Number(deviceID), deviceType });
     });
     stmt.finalize();
 }

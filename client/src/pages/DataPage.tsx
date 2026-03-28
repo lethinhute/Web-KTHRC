@@ -32,8 +32,9 @@ interface Device {
 
 interface DataRecord {
   deviceID: number;
-  timestamp: string;
-  value: number;
+  timeStamp: number;  // Unix epoch seconds from backend
+  Cps: number;
+  uSv: number;
 }
 
 export default function DataPage() {
@@ -75,26 +76,40 @@ export default function DataPage() {
         if (!res.ok) return;
         const records = (await res.json()) as DataRecord[] | { error: string };
         if (!Array.isArray(records)) return;
-        const xData = records.map((r) => r.timestamp);
-        const yData = records.map((r) => r.value);
+        const xData = records.map((r) => new Date(r.timeStamp * 1000).toLocaleString());
+        const cpsData = records.map((r) => r.Cps);
+        const uSvData = records.map((r) => r.uSv);
         if (plotRef.current && window.Plotly) {
-          const trace = {
+          const traceCps = {
             x: xData,
-            y: yData,
+            y: cpsData,
+            name: 'CPS',
             type: 'scatter',
             mode: 'lines+markers',
             marker: { color: '#5b65b5', size: 4 },
             line: { color: '#5b65b5', width: 2 },
           };
+          const traceUSv = {
+            x: xData,
+            y: uSvData,
+            name: 'μSv/h',
+            type: 'scatter',
+            mode: 'lines+markers',
+            marker: { color: '#e07b54', size: 4 },
+            line: { color: '#e07b54', width: 2 },
+            yaxis: 'y2',
+          };
           const layout = {
             paper_bgcolor: 'rgba(0,0,0,0)',
             plot_bgcolor: 'rgba(0,0,0,0)',
             font: { color: '#fff', family: 'BaiJamjuree, sans-serif' },
-            xaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa' },
-            yaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa' },
-            margin: { t: 20, b: 60, l: 60, r: 20 },
+            xaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', title: 'Date / Time' },
+            yaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', title: 'CPS' },
+            yaxis2: { overlaying: 'y', side: 'right', color: '#e07b54', title: 'μSv/h', showgrid: false },
+            legend: { orientation: 'h', y: -0.2 },
+            margin: { t: 20, b: 80, l: 60, r: 60 },
           };
-          window.Plotly.react(plotRef.current, [trace], layout);
+          window.Plotly.react(plotRef.current, [traceCps, traceUSv], layout);
         }
       } catch {
         // ignore
@@ -123,8 +138,10 @@ export default function DataPage() {
 
       if (format === 'csv' || format === 'tsv') {
         const sep = format === 'csv' ? ',' : '\t';
-        const header = `Timestamp${sep}Value\n`;
-        const rows = records.map((r) => `${r.timestamp}${sep}${r.value}`).join('\n');
+        const header = `Timestamp${sep}CPS${sep}uSv_per_h\n`;
+        const rows = records.map((r) =>
+          `${new Date(r.timeStamp * 1000).toLocaleString()}${sep}${r.Cps}${sep}${r.uSv}`
+        ).join('\n');
         const blob = new Blob([header + rows], { type: 'text/plain' });
         downloadBlob(blob, `data.${format}`);
       }
@@ -139,13 +156,13 @@ export default function DataPage() {
       const devs = (await res.json()) as Device[] | { error: string };
       if (!Array.isArray(devs)) return;
       const sep = format === 'tsv' ? '\t' : ',';
-      let content = `DeviceID${sep}Timestamp${sep}Value\n`;
+      let content = `DeviceID${sep}Timestamp${sep}CPS${sep}uSv_per_h\n`;
       for (const d of devs) {
         const r = await fetch(`${endpoint}/record?deviceID=${d.deviceID}`);
         const records = (await r.json()) as DataRecord[] | { error: string };
         if (Array.isArray(records)) {
           records.forEach((rec) => {
-            content += `${d.deviceID}${sep}${rec.timestamp}${sep}${rec.value}\n`;
+            content += `${d.deviceID}${sep}${new Date(rec.timeStamp * 1000).toLocaleString()}${sep}${rec.Cps}${sep}${rec.uSv}\n`;
           });
         }
       }
@@ -185,23 +202,37 @@ export default function DataPage() {
         container.appendChild(plotDiv);
         allChartsRef.current.appendChild(container);
         if (window.Plotly && Array.isArray(records)) {
-          const trace = {
-            x: records.map((rec) => rec.timestamp),
-            y: records.map((rec) => rec.value),
+          const xDates = records.map((rec) => new Date(rec.timeStamp * 1000).toLocaleString());
+          const traceCps = {
+            x: xDates,
+            y: records.map((rec) => rec.Cps),
+            name: 'CPS',
             type: 'scatter',
             mode: 'lines+markers',
-            marker: { color: '#5b65b5', size: 4 },
-            line: { color: '#5b65b5', width: 2 },
+            marker: { color: '#5b65b5', size: 3 },
+            line: { color: '#5b65b5', width: 1.5 },
+          };
+          const traceUSv = {
+            x: xDates,
+            y: records.map((rec) => rec.uSv),
+            name: 'μSv/h',
+            type: 'scatter',
+            mode: 'lines+markers',
+            marker: { color: '#e07b54', size: 3 },
+            line: { color: '#e07b54', width: 1.5 },
+            yaxis: 'y2',
           };
           const layout = {
             paper_bgcolor: 'rgba(0,0,0,0)',
             plot_bgcolor: 'rgba(0,0,0,0)',
             font: { color: '#fff' },
-            xaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa' },
-            yaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa' },
-            margin: { t: 10, b: 50, l: 50, r: 10 },
+            xaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', title: 'Date / Time' },
+            yaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', title: 'CPS' },
+            yaxis2: { overlaying: 'y', side: 'right', color: '#e07b54', title: 'μSv/h', showgrid: false },
+            legend: { orientation: 'h', y: -0.25 },
+            margin: { t: 10, b: 70, l: 50, r: 50 },
           };
-          window.Plotly.newPlot(plotDiv, [trace], layout);
+          window.Plotly.newPlot(plotDiv, [traceCps, traceUSv], layout);
         }
       } catch {
         // ignore

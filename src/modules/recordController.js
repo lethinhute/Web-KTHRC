@@ -1,18 +1,16 @@
 const { query } = require('express');
 const db = require('./databaseInit')
 
-// TODO: fix all the insert in the device because all deviceID is auto increase
-
 // post -> /record
+// Devices auto-register on first POST: deviceID is the hardware-assigned ID.
 module.exports.createRecord = async (req, res) => {
-    const { deviceID, timeStamp, Cps, uSv } = req.body;
+    const { deviceID, timeStamp, Cps, uSv, deviceType } = req.body;
     if (!deviceID || !timeStamp || !Cps || !uSv) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
-    // Auto-register the device using its client-provided ID if it doesn't exist yet.
-    // Physical devices have fixed hardware IDs, so INSERT OR IGNORE correctly skips
-    // already-registered devices without creating a duplicate entry.
-    db.run("INSERT OR IGNORE INTO device (deviceID) VALUES (?)", [deviceID], (err) => {
+    // Auto-register the device on first contact using its hardware ID.
+    // INSERT OR IGNORE skips already-known devices so their existing data is preserved.
+    db.run("INSERT OR IGNORE INTO device (deviceID, deviceType) VALUES (?, ?)", [deviceID, deviceType || null], (err) => {
         if (err) {
             return res.status(500).json({ error: 'Failed to register device' });
         }
@@ -123,33 +121,37 @@ module.exports.deleteRecordByDate = (req, res) => {
 }
 
 module.exports.getNewestRecord = (req, res) => {
-    queryStr =  "SELECT r.deviceID, r.timeStamp, r.Cps, r.uSv" +
-                "FROM record r AND deviceID = ?" + 
-                "WHERE r.timestamp >= ALL(SELECT r1.timestamp FROM record r1 WHERE r.deviceID = ?)"; 
-    deviceID = req.query;
+    const { deviceID } = req.query;
     if (!deviceID) {
-        return res.status(500).json({error: "Must specify the deviceID to query a record"});
+        return res.status(400).json({ error: 'Must specify deviceID' });
     }
-    db.all(queryStr, [deviceID, deviceID], function(err, rows){
+    const queryStr =
+        'SELECT r.deviceID, r.timeStamp, r.Cps, r.uSv ' +
+        'FROM record r ' +
+        'WHERE r.deviceID = ? ' +
+        'AND r.timeStamp = (SELECT MAX(r1.timeStamp) FROM record r1 WHERE r1.deviceID = ?)';
+    db.all(queryStr, [deviceID, deviceID], function(err, rows) {
         if (err || rows.length === 0) {
-            return res.status(404).json({error: "Doesn't found the record specifies for the deviceID"});
+            return res.status(404).json({ error: 'No record found for the specified deviceID' });
         }
         return res.status(200).json(rows);
-    })
-}
+    });
+};
 
 module.exports.getRangeRecord = (req, res) => {
-    deviceID, dayFrom, dayTo = req.query;
-    queryStr =  "SELECT r.deviceID, r.timeStamp, r.Cps, r.uSv" +
-                "FROM record r AND deviceID = ?" + 
-                "WHERE date(from_unixtime(r.timestamp)) BETWEEN ? AND ?"
-    if (!deviceID || !dayFrom || !dayTo) {
-        return res.status(500).json({error: "Must specify the deviceID, dayFrom, dayTo to query this record"});
+    const { deviceID, from, to } = req.query;
+    if (!deviceID || !from || !to) {
+        return res.status(400).json({ error: 'Must specify deviceID, from, and to (Unix timestamps)' });
     }
-    db.all(queryStr, [deviceID, deviceID], function(err, rows){
+    const queryStr =
+        'SELECT r.deviceID, r.timeStamp, r.Cps, r.uSv ' +
+        'FROM record r ' +
+        'WHERE r.deviceID = ? AND r.timeStamp BETWEEN ? AND ? ' +
+        'ORDER BY r.timeStamp ASC';
+    db.all(queryStr, [deviceID, from, to], function(err, rows) {
         if (err || rows.length === 0) {
-            return res.status(404).json({error: "Doesn't found the record specifies for the deviceID in the required time range"});
+            return res.status(404).json({ error: 'No records found in the specified range' });
         }
         return res.status(200).json(rows);
-    })
+    });
 }
