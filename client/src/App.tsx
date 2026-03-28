@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage';
 import MemberPage from './pages/MemberPage';
 import ProductPage from './pages/ProductPage';
 import DataPage from './pages/DataPage';
+import TestDataPage from './pages/TestDataPage';
 import CloudPage from './pages/products/CloudPage';
 import CounterPage from './pages/products/CounterPage';
 import MppcPage from './pages/products/MppcPage';
@@ -20,6 +21,7 @@ function App() {
           <Route path="/member" element={<MemberPage />} />
           <Route path="/product" element={<ProductPage />} />
           <Route path="/data" element={<DataPage />} />
+          <Route path="/testdata" element={<TestDataPage />} />
           <Route path="/products/cloud" element={<CloudPage />} />
           <Route path="/products/counter" element={<CounterPage />} />
           <Route path="/products/mppc" element={<MppcPage />} />

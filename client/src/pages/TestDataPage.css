@@ -1,0 +1,246 @@
+.testdata-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+/* Header */
+.testdata-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.testdata-title {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: 1px;
+  display: inline-block;
+  position: relative;
+}
+
+.testdata-title::after {
+  content: '';
+  display: block;
+  width: 64px;
+  height: 3px;
+  background: var(--primary);
+  border-radius: 2px;
+  margin: 12px auto 0;
+}
+
+.testdata-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+/* Live indicator dot */
+.live-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.live-dot.live {
+  background: #2ecc71;
+  box-shadow: 0 0 8px #2ecc71;
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+.live-dot.offline {
+  background: #e74c3c;
+  box-shadow: 0 0 8px #e74c3c;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.35); }
+}
+
+.live-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #2ecc71;
+}
+
+.last-updated {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* Sections */
+.testdata-section {
+  margin-bottom: 48px;
+}
+
+.section-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-title::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 20px;
+  background: var(--primary);
+  border-radius: 2px;
+}
+
+.empty-msg {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+/* Device live cards */
+.device-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.device-live-card {
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: 20px;
+  padding: 20px;
+  transition: border-color 0.3s, transform 0.3s;
+}
+
+.device-live-card.has-data {
+  border-color: rgba(46, 204, 113, 0.4);
+}
+
+.device-live-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.dlc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.dlc-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.dlc-type {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.07);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.dlc-metrics {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.dlc-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(91, 101, 181, 0.15);
+  border-radius: 12px;
+  padding: 10px 16px;
+  flex: 1;
+}
+
+.metric-label {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.metric-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.dlc-timestamp {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.dlc-waiting {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Feed table */
+.feed-table-wrapper {
+  overflow-x: auto;
+  border: 2px solid var(--border-color);
+  border-radius: 20px;
+  background: var(--bg-card);
+}
+
+.feed-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.feed-table th {
+  padding: 14px 18px;
+  text-align: left;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.feed-table td {
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #fff;
+  white-space: nowrap;
+}
+
+.feed-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.feed-table tbody tr:hover td {
+  background: rgba(91, 101, 181, 0.12);
+}
+
+/* Highlight the most recently received row */
+.feed-row-new td {
+  animation: row-flash 1.2s ease-out both;
+}
+
+@keyframes row-flash {
+  0%   { background: rgba(46, 204, 113, 0.25); }
+  100% { background: transparent; }
+}
+
+@media (max-width: 640px) {
+  .device-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
