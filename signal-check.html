@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="./css/style.css">
+    <link href="/css/custom.css" rel="stylesheet">
+    <link href="./node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <script src="./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <meta charset="UTF-8">
+    <title>Signal Check – Rabbit Cave</title>
+    <link rel="icon" href="img/kthLOGO.ico" type="image/x-icon" />
+    <style>
+        body {
+            background-color: #0d1117;
+            color: #ffffff;
+        }
+        #signalMain {
+            padding: 20px;
+        }
+        .sc-title {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        #signalStatus {
+            font-size: 0.9rem;
+            color: #adb5bd;
+            margin-bottom: 15px;
+        }
+        .sc-table-wrapper {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 2px solid #ffffff;
+            background-color: rgba(0, 0, 0, 0.4);
+            padding: 10px;
+        }
+        #signalTable {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: Regular, sans-serif;
+        }
+        #signalTable thead tr {
+            background-color: #1c2a38;
+        }
+        #signalTable th,
+        #signalTable td {
+            padding: 10px 16px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        #signalTable tbody tr:hover {
+            background-color: rgba(91, 101, 181, 0.25);
+        }
+        #refreshBtn {
+            border-radius: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div id="header">
+    <div id="logo">
+        <a href="./index.html"><img src="./img/kth.svg" alt="Rabbit Cave"></a>
+    </div>
+    <div id="list">
+        <li><a href="/index.html" class="text-primary">Home</a></li>
+        <li><a href="./product.html" class="text-primary">Product</a></li>
+        <li><a href="/member.html" class="text-primary">Member</a></li>
+        <li><a href="/data.html" class="text-primary">Data</a></li>
+        <li><a href="/signal-check.html" class="text-primary">Signal Check</a></li>
+    </div>
+</div>
+
+<div id="signalMain">
+    <p class="sc-title">📡 Signal Check</p>
+    <p>All records received at <code>https://api.rabbitcave.com.vn/record</code>. Auto-refreshes every 5 seconds.</p>
+    <p id="signalStatus">Loading…</p>
+    <button id="refreshBtn" class="btn btn-primary mb-3" onclick="fetchAllRecords()">🔄 Refresh Now</button>
+
+    <div class="sc-table-wrapper">
+        <table id="signalTable">
+            <thead>
+                <tr>
+                    <th>Device ID</th>
+                    <th>Time</th>
+                    <th>CPS</th>
+                    <th>µSv/h</th>
+                </tr>
+            </thead>
+            <tbody id="signalTableBody">
+                <tr>
+                    <td colspan="4" class="text-center">Loading data…</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="./js/signalCheck.js"></script>
+</body>
+</html>
