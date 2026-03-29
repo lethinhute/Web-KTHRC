@@ -3,6 +3,7 @@ const session = require('express-session');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const app = express();
+const clientBuildPath = path.join(__dirname, 'src', 'public');
 
 // Cấu hình session
 app.use(session({
@@ -18,9 +19,10 @@ const mainRoute = require("./src/router/indexRouter");
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.set('trust proxy', 1);
 
-// Serve static site files from the project root
-app.use(express.static(__dirname));
+// Serve built Vite SPA assets
+app.use(express.static(clientBuildPath));
 
 // Serve static assets (images, fonts, videos) from the project root
 app.use('/img', express.static(path.join(__dirname, 'img')));
@@ -39,7 +41,7 @@ const spaLimiter = rateLimit({
 
 // Fallback to index.html for client-side routing (SPA)
 app.use(spaLimiter, (_req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
 
 module.exports = app;
