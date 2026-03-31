@@ -20,7 +20,8 @@
     "test": "jest --runInBand",
     "start": "node index.js",
     "build:client": "cd client && npm run build",
-    "build": "npm run build:client"
+    "build": "npm run build:client",
+    "deploy:auto": "powershell -ExecutionPolicy Bypass -File ./.deploy/auto-deploy.ps1"
   },
   "devDependencies": {
     "jest": "^29.7.0",
