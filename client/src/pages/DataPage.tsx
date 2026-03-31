@@ -23,6 +23,8 @@ type PlotlyLayout = { [key: string]: unknown };
 type PlotlyConfig = { [key: string]: unknown };
 type Timeframe = '1h' | '6h' | '12h' | '1d' | '1w' | '1m' | '1y' | 'custom';
 
+const timeOnlyTimeframes: Timeframe[] = ['1h', '6h', '12h', '1d'];
+
 const endpoint = 'https://api.rabbitcave.com.vn';
 const timeframeOptions: Array<{ label: string; value: Timeframe }> = [
   { label: '1H', value: '1h' },
@@ -97,6 +99,29 @@ function getQueryRange(timeframe: Timeframe, startTime: string, endTime: string)
   }
 
   return getPresetRange(timeframe);
+}
+
+function usesTimeOnlyLabels(timeframe: Timeframe): boolean {
+  return timeOnlyTimeframes.includes(timeframe);
+}
+
+function getXAxisLayout(timeframe: Timeframe) {
+  const timeOnly = usesTimeOnlyLabels(timeframe);
+
+  return {
+    type: 'date',
+    gridcolor: 'rgba(255,255,255,0.1)',
+    color: '#aaa',
+    title: timeOnly ? 'Time' : 'Date / Time',
+    tickformat: timeOnly ? '%H:%M:%S' : '%Y-%m-%d %H:%M',
+    hoverformat: timeOnly ? '%H:%M:%S' : '%Y-%m-%d %H:%M:%S',
+  };
+}
+
+function getHoverTemplate(metricLabel: string, timeframe: Timeframe, suffix = ''): string {
+  const timestampFormat = usesTimeOnlyLabels(timeframe) ? '%{x|%H:%M:%S}' : '%{x|%Y-%m-%d %H:%M:%S}';
+
+  return `${timestampFormat}<br>${metricLabel}: %{y}${suffix}<extra></extra>`;
 }
 
 function buildRecordUrl(deviceId: number, timeframe: Timeframe, startTime: string, endTime: string): string {
@@ -219,7 +244,7 @@ export default function DataPage() {
       return;
     }
 
-    const xData = nextRecords.map((record) => new Date(record.timeStamp * 1000).toLocaleString());
+    const xData = nextRecords.map((record) => new Date(record.timeStamp * 1000));
     const traceCps = {
       x: xData,
       y: nextRecords.map((record) => record.Cps),
@@ -228,6 +253,7 @@ export default function DataPage() {
       mode: 'lines+markers',
       marker: { color: '#5b65b5', size: 4 },
       line: { color: '#5b65b5', width: 2 },
+      hovertemplate: getHoverTemplate('CPS', activeTimeframe),
     };
     const traceUSv = {
       x: xData,
@@ -238,6 +264,7 @@ export default function DataPage() {
       marker: { color: '#e07b54', size: 4 },
       line: { color: '#e07b54', width: 2 },
       yaxis: 'y2',
+      hovertemplate: getHoverTemplate('μSv/h', activeTimeframe),
     };
 
     window.Plotly.react(plotRef.current, [traceCps, traceUSv], {
@@ -245,13 +272,13 @@ export default function DataPage() {
       paper_bgcolor: 'rgba(0,0,0,0)',
       plot_bgcolor: 'rgba(0,0,0,0)',
       font: { color: '#fff', family: 'BaiJamjuree, sans-serif' },
-      xaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', title: 'Date / Time' },
+      xaxis: getXAxisLayout(activeTimeframe),
       yaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', title: 'CPS' },
       yaxis2: { overlaying: 'y', side: 'right', color: '#e07b54', title: 'μSv/h', showgrid: false },
       legend: { orientation: 'h', y: -0.2 },
       margin: { t: 20, b: 80, l: 60, r: 60 },
     });
-  }, []);
+  }, [activeTimeframe]);
 
   const fetchDeviceRecords = useCallback(async (deviceId: number) => {
     const response = await fetch(buildRecordUrl(deviceId, activeTimeframe, startTime, endTime));
@@ -405,7 +432,7 @@ export default function DataPage() {
           continue;
         }
 
-        const xDates = data.map((record) => new Date(record.timeStamp * 1000).toLocaleString());
+        const xDates = data.map((record) => new Date(record.timeStamp * 1000));
         const traceCps = {
           x: xDates,
           y: data.map((record) => record.Cps),
@@ -414,6 +441,7 @@ export default function DataPage() {
           mode: 'lines+markers',
           marker: { color: '#5b65b5', size: 3 },
           line: { color: '#5b65b5', width: 1.5 },
+          hovertemplate: getHoverTemplate('CPS', activeTimeframe),
         };
         const traceUSv = {
           x: xDates,
@@ -424,13 +452,14 @@ export default function DataPage() {
           marker: { color: '#e07b54', size: 3 },
           line: { color: '#e07b54', width: 1.5 },
           yaxis: 'y2',
+          hovertemplate: getHoverTemplate('μSv/h', activeTimeframe),
         };
 
         window.Plotly.newPlot(plotDiv, [traceCps, traceUSv], {
           paper_bgcolor: 'rgba(0,0,0,0)',
           plot_bgcolor: 'rgba(0,0,0,0)',
           font: { color: '#fff' },
-          xaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', title: 'Date / Time' },
+          xaxis: getXAxisLayout(activeTimeframe),
           yaxis: { gridcolor: 'rgba(255,255,255,0.1)', color: '#aaa', title: 'CPS' },
           yaxis2: { overlaying: 'y', side: 'right', color: '#e07b54', title: 'μSv/h', showgrid: false },
           legend: { orientation: 'h', y: -0.25 },
