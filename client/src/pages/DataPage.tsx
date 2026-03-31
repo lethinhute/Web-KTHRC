@@ -48,6 +48,13 @@ interface DataRecord {
   uSv: number;
 }
 
+function deviceIdSignature(devices: Device[]): string {
+  return devices
+    .map((device) => device.deviceID)
+    .sort((a, b) => a - b)
+    .join(',');
+}
+
 function toUnixTimestamp(value: string): number | null {
   if (!value) return null;
 
@@ -165,7 +172,12 @@ export default function DataPage() {
         const data = (await response.json()) as Device[] | { error: string };
         if (!Array.isArray(data)) return;
 
-        setDevices(data);
+        setDevices((previous) => {
+          if (deviceIdSignature(previous) === deviceIdSignature(data)) {
+            return previous;
+          }
+          return data;
+        });
         setSelectedDevice((current) => {
           if (!current) return current;
           return data.find((device) => device.deviceID === current.deviceID) ?? current;
